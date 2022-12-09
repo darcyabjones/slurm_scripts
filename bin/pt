@@ -804,7 +804,9 @@ def get_index(njobs: int, p: int, i: int) -> int:
 
 def get_args(args: "list[str]", nparams: int):
     if len(args) == 0:
-        raise ValueError("ERROR: You haven't provided any files to operate on.")
+        raise ValueError(
+            "ERROR: You haven't provided any files to operate on."
+        )
 
     if (len(args) % nparams) != 0:
         raise ValueError(
@@ -872,7 +874,7 @@ def get_groups(command, nparams, lines):
     return groups
 
 
-def main():
+def main():  # noqa: C901
     args = cli(prog=sys.argv[0], args=sys.argv[1:])
     if args.file is not None:
         try:
@@ -885,6 +887,8 @@ def main():
     else:
         if args.nparams is None:
             nparams = 1
+        elif args.nparams < 1:
+            nparams = len(args.glob)
         else:
             nparams = args.nparams
 
