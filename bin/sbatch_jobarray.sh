@@ -14,6 +14,7 @@ PACK=false
 RESUME=
 MODULES=( )
 CONDAENV=
+SETUP=
 
 INFILE=/dev/stdin
 
@@ -106,6 +107,11 @@ do
         --batch-condaenv)
             check_param "--batch-condaenv" "${2:-}"
             CONDAENV="${2}"
+            shift 2
+            ;;
+        --batch-setup)
+            check_param "--batch-setup" "${2:-}"
+            SETUP="${2}"
             shift 2
             ;;
         --batch-log)
@@ -414,11 +420,23 @@ else
     CONDAENV_CMD="conda activate '${CONDAENV}'"
 fi
 
+
+if [ -z "${SETUP}" ]
+then
+    SETUP_CMD=""
+elif [ -s "${SETUP}" ]
+then
+    SETUP_CMD=". ${SETUP}"
+else
+    SETUP_CMD="${SETUP}"
+fi
+
 read -r -d '' BATCH_SCRIPT <<EOF || true
 #!/bin/bash --login
 ${DIRECTIVES}
 
 ${MODULE_CMD}
+${SETUP}
 ${CONDAENV_CMD}
 set -euo pipefail
 
@@ -447,10 +465,13 @@ cleanup()
 
 trap cleanup EXIT
 
-# srun will inherit the resource directives from parent batch script.
+# srun _should_ inherit the resource directives from parent batch script.
 srun --export=all bash -s "\${LOG_FILE_NAME}" <<'EOF_SRUN'
 #!/usr/bin/env bash
 
+${MODULE_CMD}
+${SETUP}
+${CONDAENV_CMD}
 set -euo pipefail
 
 INDEX="\$(( \${SLURM_ARRAY_TASK_ID:-0} + \${SLURM_PROCID:-0} ))"
