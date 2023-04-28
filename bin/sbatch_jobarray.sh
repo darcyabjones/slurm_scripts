@@ -36,6 +36,7 @@ SLURM_PARTITION_SET=false
 SLURM_PARTITION_DEFAULT="work"
 SLURM_JOB_NAME_SET=false
 SLURM_JOB_NAME_DEFAULT=$(basename "${SCRIPT%%.*}")
+MAX_SIMULTANEOUS=
 
 # This sets -x
 DEBUG=false
@@ -72,6 +73,7 @@ Parameters:
   --batch-log -- Log the job exit codes here so we can restart later. default "${SLURM_LOG}"
   --batch-resume -- Resume the jobarray, skipping previously successful jobs according to the file provided here. <(cat *.log) is handy here.
   --batch-pack -- Pack the job so that multiple tasks run per job array job. Uses the value of --ntasks to determine how many to run per job.
+  --batch-max-simultaneous -- Limit the number of jobs that can be running at the same time. Useful if you need to avoid IO bottlenecks or disk quotas.
   --batch-dry-run -- Print the command that will be run and exit.
   --batch-module -- Include this module the sbatch script. Can be specified multiple times.
   --batch-condaenv -- Load this conda environment.
@@ -127,6 +129,10 @@ do
         --batch-pack)
             PACK=true
             shift
+            ;;
+        --batch-max-simultaneous)
+	    MAX_SIMULTANEOUS="${2}"
+            shift 2
             ;;
         --batch-dry-run)
             DRY_RUN=true
@@ -386,6 +392,11 @@ then
     exit 0
 fi
 
+if [ ! -z "${MAX_SIMULTANEOUS}" ]
+then
+    MAX_SIMULTANEOUS="%${MAX_SIMULTANEOUS}"
+fi
+
 if [ "${PACK}" = true ]
 then
     if [ -z "${NTASKS:-}" ]
@@ -397,9 +408,9 @@ then
         echo_stderr "ERROR: If you wish to use a packed job (--batch-pack), you must provide --ntasks > 1."
         exit 1
     fi
-    ARRAY_STR="0-$(( ${NJOBS} - 1 )):${NTASKS}"
+    ARRAY_STR="0-$(( ${NJOBS} - 1 )):${NTASKS}${MAX_SIMULTANEOUS}"
 else
-    ARRAY_STR="0-$(( ${NJOBS} - 1 ))"
+    ARRAY_STR="0-$(( ${NJOBS} - 1 ))${MAX_SIMULTANEOUS}"
 fi
 
 SLURM_ARGS+=( "--array=${ARRAY_STR}" )
