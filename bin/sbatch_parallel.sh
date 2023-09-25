@@ -14,6 +14,7 @@ PACK=false
 RESUME=
 MODULES=( )
 CONDAENV=
+SETUP=
 
 INFILE=/dev/stdin
 
@@ -101,12 +102,22 @@ do
     case $key in
         --batch-module)
             check_param "--batch-module" "${2:-}"
-            MODULES=( "${MODULES[@]}" "${2}" )
+            if [ "${#MODULES[@]:-0}" -gt 0 ]
+            then
+              MODULES=( "${MODULES[@]}" "${2}" )
+            else
+              MODULES=( "${2}" )
+            fi
             shift 2
             ;;
         --batch-condaenv)
             check_param "--batch-condaenv" "${2:-}"
             CONDAENV="${2}"
+            shift 2
+            ;;
+        --batch-setup)
+            check_param "--batch-setup" "${2:-}"
+            SETUP="${2}"
             shift 2
             ;;
         --batch-log)
@@ -381,11 +392,22 @@ fi
 SBATCH_DIRECTIVES=$(printf "#SBATCH ")
 DIRECTIVES=$(printf "#SBATCH %s\n" "${SLURM_ARGS[@]}")
 
+if [ -z "${SETUP}" ]
+then
+    SETUP_CMD=""
+elif [ -s "${SETUP}" ]
+then
+    SETUP_CMD=". ${SETUP}"
+else
+    SETUP_CMD="${SETUP}"
+fi
+
 read -r -d '' BATCH_SCRIPT <<EOF || true
 #!/bin/bash --login
 ${DIRECTIVES}
 
 ${MODULE_CMD}
+${SETUP}
 ${CONDAENV_CMD}
 set -euo pipefail
 
