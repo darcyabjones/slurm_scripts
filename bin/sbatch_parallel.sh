@@ -102,7 +102,7 @@ do
     case $key in
         --batch-module)
             check_param "--batch-module" "${2:-}"
-            if [ "${#MODULES[@]:-0}" -gt 0 ]
+            if [ "${#MODULES[@]}" -gt 0 ]
             then
               MODULES=( "${MODULES[@]}" "${2}" )
             else
